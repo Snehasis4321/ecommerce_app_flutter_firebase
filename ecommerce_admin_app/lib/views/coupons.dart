@@ -175,7 +175,6 @@ class _ModifyCouponState extends State<ModifyCoupon> {
               TextFormField(
                 controller: descController,
                 validator: (v) => v!.isEmpty ? "This cant be empty." : null,
-                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                     hintText: "Description",
                     label: Text("Description"),
