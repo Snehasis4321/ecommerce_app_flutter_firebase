@@ -14,11 +14,11 @@ class _SpecificProductsState extends State<SpecificProducts> {
   @override
   Widget build(BuildContext context) {
     final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     return Scaffold(
       appBar: AppBar(
-          scrolledUnderElevation: 0,
-  forceMaterialTransparency: true,
+        scrolledUnderElevation: 0,
+        forceMaterialTransparency: true,
         title: Text(
             "${args["name"].substring(0, 1).toUpperCase()}${args["name"].substring(1)} "),
       ),
@@ -27,8 +27,8 @@ class _SpecificProductsState extends State<SpecificProducts> {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             List<ProductsModel> products =
-                ProductsModel.fromJsonList(snapshot.data!.docs)
-                    as List<ProductsModel>;
+            ProductsModel.fromJsonList(snapshot.data!.docs)
+            as List<ProductsModel>;
             if (products.isEmpty) {
               return Center(
                 child: Text("No products found."),
@@ -77,13 +77,13 @@ class _SpecificProductsState extends State<SpecificProducts> {
                             ),
                             Row(
                               children: [
-                                 SizedBox(width: 2,),
-                          Text("\₹${product.old_price}",style:  TextStyle(fontSize: 13,fontWeight: FontWeight.w500, decoration:  TextDecoration.lineThrough),),
-                          SizedBox(width: 4,),
-                          Text("\₹${product.new_price}",style:  TextStyle(fontSize: 15,fontWeight: FontWeight.w600),),
-                          SizedBox(width: 2,),
-                          Icon(Icons.arrow_downward,color: Colors.green, size: 14,),
-                                      Text("${discountPercent(product.old_price,product.new_price)}%",style:  TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color: Colors.green),),
+                                SizedBox(width: 2,),
+                                Text("\₹${product.old_price}",style:  TextStyle(fontSize: 13,fontWeight: FontWeight.w500, decoration:  TextDecoration.lineThrough),),
+                                SizedBox(width: 4,),
+                                Text("\₹${product.new_price}",style:  TextStyle(fontSize: 15,fontWeight: FontWeight.w600),),
+                                SizedBox(width: 2,),
+                                Icon(Icons.arrow_downward,color: Colors.green, size: 14,),
+                                Text("${discountPercent(product.old_price,product.new_price)}%",style:  TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color: Colors.green),),
                               ],
                             )
                           ],

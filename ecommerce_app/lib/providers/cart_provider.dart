@@ -1,108 +1,91 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ecommerce_app/controllers/db_service.dart';
 import 'package:ecommerce_app/models/cart_model.dart';
 import 'package:ecommerce_app/models/products_model.dart';
 import 'package:flutter/material.dart';
 
-class CartProvider extends ChangeNotifier{
-  
+class CartProvider extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _cartSubscription;
   StreamSubscription<QuerySnapshot>? _productSubscription;
 
   bool isLoading = true;
-
   List<CartModel> carts = [];
-  List<String> cartUids=[]; 
+  List<String> cartUids = [];
   List<ProductsModel> products = [];
   int totalCost = 0;
   int totalQuantity = 0;
 
- CartProvider(){
+  CartProvider() {
     readCartData();
   }
 
-   // add product to the cart along with quantity
   void addToCart(CartModel cartModel) {
     DbService().addToCart(cartData: cartModel);
     notifyListeners();
   }
 
-  // stream and read cart data
   void readCartData() {
     isLoading = true;
     _cartSubscription?.cancel();
-    _cartSubscription = DbService().readUserCart().listen((snapshot) {
-      List<CartModel> cartsData =
-          CartModel.fromJsonList(snapshot.docs) as List<CartModel>;
 
+    _cartSubscription = DbService().readUserCart().listen((snapshot) {
+      List<CartModel> cartsData = CartModel.fromJsonList(snapshot.docs);
       carts = cartsData;
 
-      cartUids = [];
-      for (int i = 0; i < carts.length; i++) {
-        cartUids.add(carts[i].productId);
-        print("cartUids: ${cartUids[i]}");
-      }
-      if (carts.length > 0) {
+      cartUids = carts.map((e) => e.productId).toList();
+
+      if (carts.isNotEmpty) {
         readCartProducts(cartUids);
       }
+
       isLoading = false;
       notifyListeners();
     });
   }
 
-  // read cart products
-     void readCartProducts(List<String> uids) {
+  void readCartProducts(List<String> uids) {
     _productSubscription?.cancel();
+
     _productSubscription = DbService().searchProducts(uids).listen((snapshot) {
-      List<ProductsModel> productsData =
-          ProductsModel.fromJsonList(snapshot.docs) as List<ProductsModel>;
+      List<ProductsModel> productsData = ProductsModel.fromJsonList(snapshot.docs);
       products = productsData;
-      isLoading = false;
-      addCost(products, carts); // Calculate total cost
+
+      addCost(products, carts);
       calculateTotalQuantity();
+      isLoading = false;
       notifyListeners();
     });
   }
-  
-  
-  // add cost of all products
+
   void addCost(List<ProductsModel> products, List<CartModel> carts) {
     totalCost = 0;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (int i = 0; i < carts.length; i++) {
-        totalCost += carts[i].quantity * products[i].new_price;
-      }
-      notifyListeners();
-    });
-  }
-
-  // calculate total quantity for products
-   void calculateTotalQuantity() {
-    totalQuantity = 0;
     for (int i = 0; i < carts.length; i++) {
-      totalQuantity += carts[i].quantity;
+      totalCost += carts[i].quantity * products[i].new_price;
     }
-    print("totalQuantity: $totalQuantity");
     notifyListeners();
   }
 
+  void calculateTotalQuantity() {
+    totalQuantity = carts.fold(0, (sum, item) => sum + item.quantity);
+    notifyListeners();
+  }
 
-  // delete product from the cart
   void deleteItem(String productId) {
     DbService().deleteItemFromCart(productId: productId);
+    notifyListeners();
+  }
+
+  void decreaseCount(String productId) {
+    DbService().decreaseCount(productId: productId);
+    notifyListeners();
+  }
+
+  Future<void> refreshCart() async {
     readCartData();
-    notifyListeners();
   }
 
-  // decrease the count of product
-  void decreaseCount(String productId) async{
-   await DbService().decreaseCount(productId: productId);
-    notifyListeners();
-  }
-
-  void cancelProvider(){
+  void cancelProvider() {
     _cartSubscription?.cancel();
     _productSubscription?.cancel();
   }

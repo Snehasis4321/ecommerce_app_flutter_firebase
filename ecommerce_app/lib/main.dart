@@ -19,22 +19,28 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-await Firebase.initializeApp(
+
+  await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-);
-await dotenv.load(fileName: ".env");
-  Stripe.publishableKey=dotenv.env["STRIPE_PUBLISH_KEY"]!;
-   Stripe.merchantIdentifier = 'merchant.flutter.stripe.test';
-  Stripe.urlScheme = 'flutterstripe';
-  await Stripe.instance.applySettings();
+  await dotenv.load(fileName: ".env");
 
+  final publishableKey = dotenv.env["STRIPE_PUBLISH_KEY"];
+  if (publishableKey == null || publishableKey.isEmpty) {
+    debugPrint("⚠️ STRIPE_PUBLISH_KEY not found in .env file!");
+  } else {
+    Stripe.publishableKey = publishableKey;
+    Stripe.merchantIdentifier = 'merchant.flutter.stripe.test';
+    Stripe.urlScheme = 'flutterstripe';
+    await Stripe.instance.applySettings();
+  }
 
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -51,7 +57,7 @@ class MyApp extends StatelessWidget {
         title: 'eCommerce App',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          
+
           // This is the theme of your application.
           //
           // TRY THIS: Try running your application with "flutter run". You'll see
@@ -74,7 +80,7 @@ class MyApp extends StatelessWidget {
           "/":(context)=> CheckUser(),
           "/login": (context)=> LoginPage(),
           "/home": (context)=> HomeNav(),
-          "/signup": (context)=> SingupPage(),
+          "/signup": (context)=> SignupPage(),
           "/update_profile":(context)=> UpdateProfile(),
           "/discount": (context)=> DiscountPage(),
           "/specific": (context)=> SpecificProducts(),
@@ -84,7 +90,7 @@ class MyApp extends StatelessWidget {
           "/orders":(context)=> OrdersPage(),
           "/view_order":(context)=> ViewOrder(),
         },
-       
+
       ),
     );
   }

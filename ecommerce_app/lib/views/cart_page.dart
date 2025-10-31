@@ -57,9 +57,9 @@ class _CartPageState extends State<CartPage> {
             return SizedBox();
           } else {
             return Container(
-               width: double.infinity,
-          height: 60,
-          padding: EdgeInsets.all(8),
+              width: double.infinity,
+              height: 60,
+              padding: EdgeInsets.all(8),
               child: Row(
                 mainAxisAlignment:  MainAxisAlignment.spaceBetween,
                 children: [
@@ -71,9 +71,9 @@ class _CartPageState extends State<CartPage> {
                     Navigator.pushNamed(context,"/checkout");
                   }, child: Text("Procced to Checkout"),
                     style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
                   )
                 ],
               ),

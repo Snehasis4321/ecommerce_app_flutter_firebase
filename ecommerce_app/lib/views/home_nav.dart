@@ -47,31 +47,31 @@ class _HomeNavState extends State<HomeNav> {
         showUnselectedLabels: true,
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              label: 'Home',
-            ),
+            icon: Icon(Icons.home_outlined),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.local_shipping_outlined),
-              label: 'Orders',
-            ),
+            icon: Icon(Icons.local_shipping_outlined),
+            label: 'Orders',
+          ),
           BottomNavigationBarItem(
-              icon: Consumer<CartProvider>(
-                builder: (context, value, child) {
-                  if(value.carts.length>0){
-                    return Badge(label: Text(value.carts.length.toString()),
+            icon: Consumer<CartProvider>(
+              builder: (context, value, child) {
+                if(value.carts.length>0){
+                  return Badge(label: Text(value.carts.length.toString()),
                     child: Icon(Icons.shopping_cart_outlined),
                     backgroundColor:  Colors.green.shade400,
-                    );
-                  }
-                  return Icon(Icons.shopping_cart_outlined);
-                },
-              ),
-              label: 'Cart',
+                  );
+                }
+                return Icon(Icons.shopping_cart_outlined);
+              },
             ),
+            label: 'Cart',
+          ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.account_circle_outlined),
-              label: 'Profile',
-            ),
+            icon: Icon(Icons.account_circle_outlined),
+            label: 'Profile',
+          ),
         ],
       ),
     );

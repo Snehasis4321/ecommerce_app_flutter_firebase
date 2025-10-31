@@ -1,3 +1,4 @@
+import 'package:ecommerce_app/controllers/auth_service.dart';
 import 'package:ecommerce_app/controllers/db_service.dart';
 import 'package:ecommerce_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
@@ -12,114 +13,167 @@ class UpdateProfile extends StatefulWidget {
 
 class _UpdateProfileState extends State<UpdateProfile> {
   final formKey = GlobalKey<FormState>();
-  TextEditingController _nameController = TextEditingController();
-  TextEditingController _emailController = TextEditingController();
-  TextEditingController _addressController = TextEditingController();
-  TextEditingController _phoneController = TextEditingController();
+
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _addressController;
+  late TextEditingController _phoneController;
+  final TextEditingController _currentPasswordController =
+  TextEditingController();
+
+  bool _loading = false;
 
   @override
   void initState() {
-    final user=Provider.of<UserProvider>(context,listen: false);
-    _nameController.text = user.name;
-    _emailController.text = user.email;
-    _addressController.text = user.address;
-    _phoneController.text = user.phone;
-
     super.initState();
+    final user = Provider.of<UserProvider>(context, listen: false);
+    _nameController = TextEditingController(text: user.name);
+    _emailController = TextEditingController(text: user.email);
+    _addressController = TextEditingController(text: user.address);
+    _phoneController = TextEditingController(text: user.phone);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
+    _currentPasswordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateProfile() async {
+    if (!formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    try {
+      // 1️⃣ Update email if changed
+      if (_emailController.text != userProvider.email) {
+        if (_currentPasswordController.text.isEmpty) {
+          throw "Please enter current password to change email.";
+        }
+
+        final res = await AuthService().updateEmail(
+          newEmail: _emailController.text,
+          currentPassword: _currentPasswordController.text,
+        );
+
+        if (!res.contains("successfully")) {
+          throw res; // show error if update failed
+        }
+      }
+
+      // 2️⃣ Update other profile fields
+      final data = {
+        "name": _nameController.text,
+        "phone": _phoneController.text,
+        "address": _addressController.text,
+      };
+
+      await DbService().updateUserData(extraData: data);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("$e")),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Update Profile"),
-          scrolledUnderElevation: 0,
-  forceMaterialTransparency: true,
+        title: const Text("Update Profile"),
+        scrolledUnderElevation: 0,
+        forceMaterialTransparency: true,
       ),
       body: SingleChildScrollView(
         child: Form(
-          key:  formKey,
+          key: formKey,
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
-                      labelText: "Name",
-                      hintText: "Name",
-                      border: OutlineInputBorder()),
+                  enabled: !_loading,
+                  decoration: const InputDecoration(
+                    labelText: "Name",
+                    border: OutlineInputBorder(),
+                  ),
                   validator: (value) =>
-                      value!.isEmpty ? "Name cannot be empty." : null,
+                  value!.isEmpty ? "Name cannot be empty." : null,
                 ),
-                SizedBox(
-                  height: 10,
-                ),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _emailController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                      labelText: "Email",
-                      hintText: "Email",
-                      border: OutlineInputBorder()),
+                  enabled: !_loading,
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    border: OutlineInputBorder(),
+                  ),
                   validator: (value) =>
-                      value!.isEmpty ? "Email cannot be empty." : null,
+                  value!.isEmpty ? "Email cannot be empty." : null,
                 ),
-                SizedBox(
-                  height: 10,
-                ),
+                const SizedBox(height: 10),
                 TextFormField(
-                  maxLines: 3,
+                  controller: _currentPasswordController,
+                  enabled: !_loading,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Current Password (required to change email)",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
                   controller: _addressController,
-                  decoration: InputDecoration(
-                      labelText: "Address",
-                      hintText: "Address",
-                      border: OutlineInputBorder()),
+                  enabled: !_loading,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: "Address",
+                    border: OutlineInputBorder(),
+                  ),
                   validator: (value) =>
-                      value!.isEmpty ? "Address cannot be empty." : null,
+                  value!.isEmpty ? "Address cannot be empty." : null,
                 ),
-                SizedBox(
-                  height: 10,
-                ),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: InputDecoration(
-                      labelText: "Phone",
-                      hintText: "Phone",
-                      border: OutlineInputBorder()),
+                  enabled: !_loading,
+                  decoration: const InputDecoration(
+                    labelText: "Phone",
+                    border: OutlineInputBorder(),
+                  ),
                   validator: (value) =>
-                      value!.isEmpty ? "Phone cannot be empty." : null,
+                  value!.isEmpty ? "Phone cannot be empty." : null,
                 ),
-                SizedBox(height: 10,),
-                 SizedBox(
-                    height: 60,
-                    width: MediaQuery.of(context).size.width * .9,
-                    child: ElevatedButton(
-                      
-                      
-                        onPressed: ()async {
-                          if(formKey.currentState!.validate()){
-                            var data={
-                              "name":_nameController.text,
-                              "email":_emailController.text,
-                              "address":_addressController.text,
-                              "phone":_phoneController.text
-                            };
-await DbService().updateUserData(extraData: data);
-Navigator.pop(context);
-ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Profile Updated")));
-
-                          }
-                          
-                        },
-                        style:  ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white
-                        ),
-                        child: Text(
-                          "Update Profile",
-                          style: TextStyle(fontSize: 16),
-                        ))),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 50,
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _updateProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: _loading
+                        ? const CircularProgressIndicator(
+                      color: Colors.white,
+                    )
+                        : const Text("Update Profile"),
+                  ),
+                ),
               ],
             ),
           ),

@@ -17,12 +17,12 @@ class _ViewProductState extends State<ViewProduct> {
   @override
   Widget build(BuildContext context) {
     final arguments =
-        ModalRoute.of(context)!.settings.arguments as ProductsModel;
+    ModalRoute.of(context)!.settings.arguments as ProductsModel;
     return Scaffold(
       appBar: AppBar(
         title: Text("Product Details"),
-  scrolledUnderElevation: 0,
-  forceMaterialTransparency: true,
+        scrolledUnderElevation: 0,
+        forceMaterialTransparency: true,
 
       ),
       body: SingleChildScrollView(
@@ -53,7 +53,7 @@ class _ViewProductState extends State<ViewProduct> {
                   ),
                   Row(
                     children: [
-                   
+
                       Text(
                         "₹ ${arguments.old_price}",
                         style: TextStyle(
@@ -66,85 +66,85 @@ class _ViewProductState extends State<ViewProduct> {
                       Text(
                         "₹ ${arguments.new_price}",
                         style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       SizedBox(width: 10,),
                       Icon(Icons.arrow_downward, color: Colors.green,
-                          size: 20,),
+                        size: 20,),
                       Text("${discountPercent(arguments.old_price, arguments.new_price)} %",
-                       style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green),)
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green),)
                     ],
                   ),
-        
+
                   SizedBox(
                     height: 10,
                   ),
                   arguments.maxQuantity == 0
-                        ? Text(
-                            "Out of Stock",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.red),
-                          )
-                        : Text(
-                            "Only ${arguments.maxQuantity} left in stock",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.green),
-                          ),
+                      ? Text(
+                    "Out of Stock",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.red),
+                  )
+                      : Text(
+                    "Only ${arguments.maxQuantity} left in stock",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green),
+                  ),
                   SizedBox(
                     height: 10,
                   ),
                   Text(arguments.description,
-                   style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade700),)
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700),)
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: 
+      bottomNavigationBar:
       arguments.maxQuantity!=0?
-        Row(children: [
-        
-SizedBox(
-  height: 60,width: MediaQuery.of(context).size.width*.5,
-  child: ElevatedButton(
-                    onPressed: () {
-                      Provider.of<CartProvider>(context,listen: false).addToCart(CartModel(productId: arguments.id, quantity: 1));
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Added to cart")));
-                    },
-                    child: Text("Add to Cart"),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder()),
-                  ),
-),
-SizedBox(
-  height: 60,width: MediaQuery.of(context).size.width*.5,
-  child: ElevatedButton(
-                    onPressed: () {
-                       Provider.of<CartProvider>(context,listen: false).addToCart(CartModel(productId: arguments.id, quantity: 1));
-                       Navigator.pushNamed(context,"/checkout");
-                    },
-                    child: Text("Buy Now"),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor:  Colors.blue.shade600,
-                        shape: RoundedRectangleBorder()),
-                  ),
-),
+      Row(children: [
+
+        SizedBox(
+          height: 60,width: MediaQuery.of(context).size.width*.5,
+          child: ElevatedButton(
+            onPressed: () {
+              Provider.of<CartProvider>(context,listen: false).addToCart(CartModel(productId: arguments.id, quantity: 1));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Added to cart")));
+            },
+            child: Text("Add to Cart"),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder()),
+          ),
+        ),
+        SizedBox(
+          height: 60,width: MediaQuery.of(context).size.width*.5,
+          child: ElevatedButton(
+            onPressed: () {
+              Provider.of<CartProvider>(context,listen: false).addToCart(CartModel(productId: arguments.id, quantity: 1));
+              Navigator.pushNamed(context,"/checkout");
+            },
+            child: Text("Buy Now"),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor:  Colors.blue.shade600,
+                shape: RoundedRectangleBorder()),
+          ),
+        ),
       ],): SizedBox(),
     );
   }

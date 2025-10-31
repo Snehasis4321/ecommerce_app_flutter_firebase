@@ -5,7 +5,7 @@ class OrdersModel{
   int discount,total,created_at;
   List<OrderProductModel> products;
 
-  
+
   OrdersModel({
     required this.id,
     required this.created_at,
@@ -21,21 +21,33 @@ class OrdersModel{
   });
 
   // convert json to object model
-  factory OrdersModel.fromJson(Map<String,dynamic> json,String id){
+  factory OrdersModel.fromJson(Map<String, dynamic> json, String id) {
+    int createdAtMillis = 0;
+
+    // Handle Firestore Timestamp or plain int
+    if (json["created_at"] is Timestamp) {
+      createdAtMillis = (json["created_at"] as Timestamp).millisecondsSinceEpoch;
+    } else if (json["created_at"] is int) {
+      createdAtMillis = json["created_at"];
+    }
+
     return OrdersModel(
-      id: id??"",
-      created_at: json["created_at"]??0,
-      email: json["email"]??"",
-      name: json["name"]??"",
-      phone: json["phone"]??"",
-      status: json["status"]??"",
-      address: json["address"]??"",
-      user_id: json["user_id"]??"",
-      discount: json["discount"]??0,
-      total: json["total"]??0,
-      products: List<OrderProductModel>.from(json["products"].map((e) => OrderProductModel.fromJson(e)))
+      id: id,
+      created_at: createdAtMillis,
+      email: json["email"] ?? "",
+      name: json["name"] ?? "",
+      phone: json["phone"] ?? "",
+      status: json["status"] ?? "",
+      address: json["address"] ?? "",
+      user_id: json["user_id"] ?? "",
+      discount: json["discount"] ?? 0,
+      total: json["total"] ?? 0,
+      products: List<OrderProductModel>.from(
+        (json["products"] ?? []).map((e) => OrderProductModel.fromJson(e)),
+      ),
     );
   }
+
 
 // Convert List<QueryDocumentSnapshot> to List<OrdersModel>
   static List<OrdersModel> fromJsonList(List<QueryDocumentSnapshot> list) {
@@ -48,17 +60,17 @@ class OrderProductModel{
   String id,name,image;
   int quantity,single_price,total_price;
 
-   OrderProductModel({required this.id,required this.name,required this.image,required this.quantity,required this.single_price,required this.total_price});
+  OrderProductModel({required this.id,required this.name,required this.image,required this.quantity,required this.single_price,required this.total_price});
 
   //  convert json to object model
   factory OrderProductModel.fromJson(Map<String,dynamic> json){
     return OrderProductModel(
-      id: json["id"]??"",
-      name: json["name"]??"",
-      image: json["image"]??"",
-      quantity: json["quantity"]??0,
-      single_price: json["single_price"]??0,
-      total_price: json["total_price"]??0
+        id: json["id"]??"",
+        name: json["name"]??"",
+        image: json["image"]??"",
+        quantity: json["quantity"]??0,
+        single_price: json["single_price"]??0,
+        total_price: json["total_price"]??0
     );
   }
 }

@@ -33,9 +33,9 @@ class MailService{
 <tr style="border-bottom: 1px solid #ddd; padding:  8px;">
                 <td> <img src="${product.image}" alt="" style="width: 100px;"></td>
                 <td style="padding: 8px;">${product.name}</td>
-                <td style="padding: 8px;">₹${product.single_price}</td>
+                <td style="padding: 8px;">KSh${product.single_price}</td>
                 <td style="padding: 8px;">${product.quantity}</td>
-                <td style="padding: 8px;">₹${product.total_price}</td>
+                <td style="padding: 8px;">KSh${product.total_price}</td>
             </tr>
 """).join("")}
     </tbody>
@@ -48,8 +48,8 @@ class MailService{
      <div class="total" style="width: 100%;   margin:   10px auto; max-width: 1000px;">
         <!-- <hr> -->
 
-        <p style="text-align: right;  font-size: 16px; font-weight: 400;">Discount: - ₹${order.discount}</p>
-        <p style="text-align: right;  font-size: 20px; font-weight: 800;">Total: ₹${order.total}</p>
+        <p style="text-align: right;  font-size: 16px; font-weight: 400;">Discount: - KSh${order.discount}</p>
+        <p style="text-align: right;  font-size: 20px; font-weight: 800;">Total: KSh${order.total}</p>
      </div>
     <p style="text-align: center; font-size: 14px; color: #666;">Thank you for shopping with us!</p>
 </body>

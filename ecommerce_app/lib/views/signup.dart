@@ -2,14 +2,14 @@
 import 'package:ecommerce_app/controllers/auth_service.dart';
 import 'package:flutter/material.dart';
 
-class SingupPage extends StatefulWidget {
-  const SingupPage({super.key});
+class SignupPage extends StatefulWidget {
+  const SignupPage({super.key});
 
   @override
-  State<SingupPage> createState() => _SingupPageState();
+  State<SignupPage> createState() => _SingupPageState();
 }
 
-class _SingupPageState extends State<SingupPage> {
+class _SingupPageState extends State<SignupPage> {
     final formKey = GlobalKey<FormState>();
   TextEditingController _nameController = TextEditingController();
   TextEditingController _emailController = TextEditingController();

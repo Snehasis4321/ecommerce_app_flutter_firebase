@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -49,23 +40,48 @@ class DefaultFirebaseOptions {
     }
   }
 
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyA7NiJQ0fsVqS6Fjqz8yy1Q2g6Akj8frK0',
+    appId: '1:109626496368:web:6c936a9e2688a0f4142bb5',
+    messagingSenderId: '109626496368',
+    projectId: 'ecommerce-app-7669',
+    authDomain: 'ecommerce-app-7669.firebaseapp.com',
+    storageBucket: 'ecommerce-app-7669.firebasestorage.app',
+  );
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBEQrg45D7XgjW0ouJdusG8xNM--SbF7lY',
-    appId: '1:705724924854:android:73f24164b273fcf8c4b717',
-    messagingSenderId: '705724924854',
-    projectId: 'contacts-app-b5a05',
-    storageBucket: 'contacts-app-b5a05.appspot.com',
+    apiKey: 'AIzaSyDIkgR_eXR7vW-aWwqdg08FzB_yFXkIdlw',
+    appId: '1:109626496368:android:03db5bd085304ca1142bb5',
+    messagingSenderId: '109626496368',
+    projectId: 'ecommerce-app-7669',
+    storageBucket: 'ecommerce-app-7669.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBSmUcRo7dTnvFvPtUsZWGr_qbszANhtWA',
-    appId: '1:705724924854:ios:a4d5856f75e2f6ccc4b717',
-    messagingSenderId: '705724924854',
-    projectId: 'contacts-app-b5a05',
-    storageBucket: 'contacts-app-b5a05.appspot.com',
-    androidClientId: '705724924854-r3b0ntdh2fi13v9psgc8dgl9ds4hf4nl.apps.googleusercontent.com',
-    iosClientId: '705724924854-tvhiprg0kg1lvc77j8l8r3d8rr5va3bm.apps.googleusercontent.com',
+    apiKey: 'AIzaSyAwjiTcPcVrTbdg9rKYWlAnkMIh7jzgJZQ',
+    appId: '1:109626496368:ios:1b735521e4083502142bb5',
+    messagingSenderId: '109626496368',
+    projectId: 'ecommerce-app-7669',
+    storageBucket: 'ecommerce-app-7669.firebasestorage.app',
     iosBundleId: 'com.example.ecommerceApp',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyAwjiTcPcVrTbdg9rKYWlAnkMIh7jzgJZQ',
+    appId: '1:109626496368:ios:1b735521e4083502142bb5',
+    messagingSenderId: '109626496368',
+    projectId: 'ecommerce-app-7669',
+    storageBucket: 'ecommerce-app-7669.firebasestorage.app',
+    iosBundleId: 'com.example.ecommerceApp',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyA7NiJQ0fsVqS6Fjqz8yy1Q2g6Akj8frK0',
+    appId: '1:109626496368:web:6ed3f3023898e1ee142bb5',
+    messagingSenderId: '109626496368',
+    projectId: 'ecommerce-app-7669',
+    authDomain: 'ecommerce-app-7669.firebaseapp.com',
+    storageBucket: 'ecommerce-app-7669.firebasestorage.app',
   );
 
 }

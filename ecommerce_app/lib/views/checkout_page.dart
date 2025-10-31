@@ -5,6 +5,7 @@ import 'package:ecommerce_app/controllers/mail_service.dart';
 import 'package:ecommerce_app/models/orders_model.dart';
 import 'package:ecommerce_app/providers/cart_provider.dart';
 import 'package:ecommerce_app/providers/user_provider.dart';
+import 'package:ecommerce_app/services/mpesa_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -19,298 +20,312 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   TextEditingController _couponController = TextEditingController();
+  TextEditingController _mpesaPhoneController = TextEditingController();
 
   int discount = 0;
-  int toPay = 0;
   String discountText = "";
+  bool paymentSuccess = false;
+  String? orderId; // ✅ Added orderId here
 
-  bool paymentSuccess=false;
-  Map<String,dynamic> dataOfOrder={};
-
-    discountCalculator(int disPercent, int totalCost) {
+  // 🔹 Calculate Discount
+  void discountCalculator(int disPercent, int totalCost) {
     discount = (disPercent * totalCost) ~/ 100;
-  setState(() {});
+    setState(() {});
   }
 
+  // 🔹 Initialize Stripe Payment Sheet
   Future<void> initPaymentSheet(int cost) async {
     try {
       final user = Provider.of<UserProvider>(context, listen: false);
-      // 1. create payment intent on the server
-      final data = await createPaymentIntent(name: user.name,address: user.address,
-      amount:  (cost*100).toString());
+      final data = await createPaymentIntent(
+        name: user.name,
+        address: user.address,
+        amount: (cost * 100).toString(),
+      );
 
-      // 2. initialize the payment sheet
-     await Stripe.instance.initPaymentSheet(
+      await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
-          // Set to true for custom flow
           customFlow: false,
-          // Main params
-          merchantDisplayName: 'Flutter Stripe Store Demo',
+          merchantDisplayName: 'Ecommerce Flutter App',
           paymentIntentClientSecret: data['client_secret'],
-          // Customer keys
           customerEphemeralKeySecret: data['ephemeralKey'],
           customerId: data['id'],
-          // Extra options
-          
-          
           style: ThemeMode.dark,
         ),
       );
-     
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Stripe Error: $e')),
       );
-      rethrow;
     }
-}
+  }
 
+  // 🔹 Handle Stripe Payment
+  Future<void> handleStripePayment(int cost) async {
+    await initPaymentSheet(cost);
+    try {
+      await Stripe.instance.presentPaymentSheet();
+      await createOrderAfterPayment("Stripe");
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Stripe payment failed: $e")),
+      );
+    }
+  }
 
+  // 🔹 Handle M-Pesa Payment
+  Future<void> handleMpesaPayment(int cost) async {
+    try {
+      String phone = _mpesaPhoneController.text.trim();
+      if (phone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Please enter your M-Pesa phone number")),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Initiating M-Pesa payment...")),
+      );
+
+      // ✅ Pre-create the order with PENDING payment before initiating M-Pesa
+      if (orderId == null) {
+        await createOrderAfterPayment("M-Pesa (Pending)", preCreateOnly: true);
+      }
+
+      final response = await MpesaService.initiatePayment(
+        phone: phone,
+        amount: cost,
+        orderId: orderId!,
+      );
+
+      if (response.containsKey("ResponseCode") &&
+          response["ResponseCode"] == "0") {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  "STK Push sent! Check your phone to complete payment.")),
+        );
+        await DbService().updateOrderStatus(
+          docId: orderId!,
+          data: {"status": "PAID"},
+        );
+        await afterPaymentSuccess("M-Pesa");
+      } else {
+        throw Exception("M-Pesa initiation failed");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("M-Pesa Error: $e")),
+      );
+    }
+  }
+
+  // 🔹 Create Order in Firestore
+  Future<void> createOrderAfterPayment(String method,
+      {bool preCreateOnly = false}) async {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    final user = Provider.of<UserProvider>(context, listen: false);
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    List products = [];
+    for (int i = 0; i < cart.products.length; i++) {
+      products.add({
+        "id": cart.products[i].id,
+        "name": cart.products[i].name,
+        "image": cart.products[i].image,
+        "single_price": cart.products[i].new_price,
+        "total_price": cart.products[i].new_price * cart.carts[i].quantity,
+        "quantity": cart.carts[i].quantity
+      });
+    }
+
+    Map<String, dynamic> orderData = {
+      "user_id": currentUser!.uid,
+      "name": user.name,
+      "email": user.email,
+      "address": user.address,
+      "phone": user.phone,
+      "discount": discount,
+      "total": cart.totalCost - discount,
+      "products": products,
+      "status": method == "Stripe" ? "PAID" : "PENDING",
+      "payment_method": method,
+      "created_at": DateTime.now().millisecondsSinceEpoch
+    };
+
+    // ✅ Create new order and store its ID
+    if (orderId == null) {
+      final orderRef = await DbService().createOrder(data: orderData);
+      orderId = orderRef.id;
+    } else if (!preCreateOnly) {
+      await DbService().updateOrderStatus(
+        docId: orderId!,
+        data: {"status": "PAID"},
+      );
+    }
+
+    if (!preCreateOnly) {
+      await afterPaymentSuccess(method);
+    }
+  }
+
+  // 🔹 Shared logic after successful payment
+  Future<void> afterPaymentSuccess(String method) async {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    final user = Provider.of<UserProvider>(context, listen: false);
+
+    for (int i = 0; i < cart.products.length; i++) {
+      await DbService().reduceQuantity(
+        productId: cart.products[i].id,
+        quantity: cart.carts[i].quantity,
+      );
+    }
+
+    await DbService().emptyCart();
+    paymentSuccess = true;
+
+    if (paymentSuccess) {
+      MailService()
+          .sendMailFromGmail(user.email, OrdersModel.fromJson({}, orderId!));
+    }
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Order placed successfully")),
+    );
+  }
+
+  // 🔹 UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Checkout",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-        ),
+        title: Text("Checkout", style: TextStyle(fontSize: 22)),
         scrolledUnderElevation: 0,
-        forceMaterialTransparency: true,
       ),
       body: SingleChildScrollView(
         child: Consumer<UserProvider>(
-          builder: (context, userData, child) => Consumer<CartProvider>(
-            builder: (context, cartData, child) {
-              return Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Delivery Details",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                    ),
-                    Container(
-                       padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(children: [
-                         SizedBox(
-                           width: MediaQuery.of(context).size.width * .65,
-                           child: Column(
-                               crossAxisAlignment: CrossAxisAlignment.start,
-                             children: [
-                               Text(userData.name,style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500),),
-                           Text(userData.email),       
-                           Text(userData.address),       
-                           Text(userData.phone),       
-                             ],
-                           ),
-                         ),
-                         Spacer(),
-                         IconButton(onPressed: (){
-                          Navigator.pushNamed(context,"/update_profile");
-                         }, icon: Icon(Icons.edit_outlined))   
-                              ],),
-                    ),
-                       SizedBox(
-                          height: 20,
+          builder: (context, userData, child) =>
+              Consumer<CartProvider>(builder: (context, cartData, child) {
+                int total = cartData.totalCost - discount;
+                return Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Delivery Details",
+                          style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                      Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        Text("Have a coupon?"),
-                         Row(
-                          children: [
-                            SizedBox(
-                              width: 200,
-                              child: TextFormField(
-                                textCapitalization: TextCapitalization
-                                    .characters, // capitalize first letter of each word
-                                controller: _couponController,
-                                decoration: InputDecoration(
-                                  labelText: "Coupon Code",
-                                  hintText: "Enter Coupon for extra discount",
-                                  border: InputBorder.none,
-                                  filled: true,
-                                  fillColor: Colors.grey.shade200,
-                                ),
+                        child: Row(children: [
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * .65,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(userData.name,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                                Text(userData.email),
+                                Text(userData.address),
+                                Text(userData.phone),
+                              ],
+                            ),
+                          ),
+                          Spacer(),
+                          IconButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, "/update_profile");
+                            },
+                            icon: Icon(Icons.edit_outlined),
+                          )
+                        ]),
+                      ),
+                      SizedBox(height: 20),
+                      Text("Have a coupon?"),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 200,
+                            child: TextFormField(
+                              controller: _couponController,
+                              decoration: InputDecoration(
+                                labelText: "Coupon Code",
+                                filled: true,
+                                fillColor: Colors.grey.shade200,
                               ),
                             ),
-                            TextButton(
-                                onPressed: () async {
-                                  QuerySnapshot querySnapshot =
-                                      await DbService().verifyDiscount(
-                                          code: _couponController.text
-                                              .toUpperCase());
-
-                                  if (querySnapshot.docs.isNotEmpty) {
-                                    QueryDocumentSnapshot doc =
-                                        querySnapshot.docs.first;
-                                    String code = doc.get('code');
-                                    int percent = doc.get('discount');
-
-                                    // access other fields as needed
-                                    print('Discount code: $code');
-                                    discountText =
-                                        "a discount of $percent% has been applied.";
-                                    discountCalculator(
-                                        percent, cartData.totalCost);
-                                  } else {
-                                    print('No discount code found');
-                                    discountText = "No discount code found";
-                                  }
-                                  setState(() {});
-                                },
-                                child: Text("Apply"))
-                          ],
-                        ),
-                          SizedBox(
-                          height: 8,
-                        ),
-                        discountText == "" ? Container() : Text(discountText),
-                        SizedBox(
-                          height: 10,
-                        ),
-                        Divider(),
-                        SizedBox(
-                          height: 10,
-                        ),
-                          Text(
-                          "Total Quantity of Products: ${cartData.totalQuantity}",
-                          style: TextStyle(
-                            fontSize: 16,
                           ),
-                        ),
-                        Text(
-                          "Sub Total: ₹ ${cartData.totalCost}",
+                          TextButton(
+                            onPressed: () async {
+                              QuerySnapshot querySnapshot = await DbService()
+                                  .verifyDiscount(
+                                  code:
+                                  _couponController.text.toUpperCase());
+                              if (querySnapshot.docs.isNotEmpty) {
+                                QueryDocumentSnapshot doc =
+                                    querySnapshot.docs.first;
+                                int percent = doc.get('discount');
+                                discountText =
+                                "A discount of $percent% has been applied.";
+                                discountCalculator(
+                                    percent, cartData.totalCost);
+                              } else {
+                                discountText = "No discount code found";
+                              }
+                              setState(() {});
+                            },
+                            child: Text("Apply"),
+                          )
+                        ],
+                      ),
+                      if (discountText.isNotEmpty) Text(discountText),
+                      Divider(),
+                      Text("Total Quantity: ${cartData.totalQuantity}"),
+                      Text("Sub Total: ₹ ${cartData.totalCost}"),
+                      Text("Extra Discount: - ₹ $discount"),
+                      Divider(),
+                      Text("Total Payable: ₹ $total",
                           style: TextStyle(
-                            fontSize: 16,
-                          ),
-                        ),
-                        Divider(),
-                        Text(
-                          "Extra Discount: - ₹ $discount",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Divider(),
-                        Text(
-                          "Total Payable: ₹ ${cartData.totalCost - discount}",
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w500),
-                        ),
-                     
-                  ],
-                ),
-              );
-            },
-          ),
+                              fontSize: 18, fontWeight: FontWeight.w500)),
+                      SizedBox(height: 20),
+                      Text("Pay with M-Pesa"),
+                      TextField(
+                        controller: _mpesaPhoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                            hintText: "Enter M-Pesa phone number",
+                            filled: true,
+                            fillColor: Colors.grey.shade200),
+                      ),
+                      SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () => handleMpesaPayment(total),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white),
+                        child: Text("Pay with M-Pesa"),
+                      ),
+                      SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () => handleStripePayment(total),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white),
+                        child: Text("Pay with Card (Stripe)"),
+                      ),
+                    ],
+                  ),
+                );
+              }),
         ),
-        
-      ),
-      bottomNavigationBar: Container(
-         height: 60,
-        padding: const EdgeInsets.all(8.0),
-        child: ElevatedButton(child: Text("Procced to pay"), onPressed: ()async{
-          final user = Provider.of<UserProvider>(context, listen: false);
-            if (user.address == "" ||
-                user.phone == "" ||
-                user.name == "" ||
-                user.email == "") {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text("Please fill your delivery details.")));
-              return;
-            }
-
-            await initPaymentSheet(
-                Provider.of<CartProvider>(context, listen: false).totalCost -
-                    discount);
-
-try{
-  await Stripe.instance.presentPaymentSheet();
-
-  final cart = Provider.of<CartProvider>(context, listen: false);
-
-              User? currentUser = FirebaseAuth.instance.currentUser;
-              List products = [];
-
-              for (int i = 0; i < cart.products.length; i++) {
-                products.add({
-                  "id": cart.products[i].id,
-                  "name": cart.products[i].name,
-                  "image": cart.products[i].image,
-                  "single_price": cart.products[i].new_price,
-                  "total_price":
-                      cart.products[i].new_price * cart.carts[i].quantity,
-                  "quantity": cart.carts[i].quantity
-                });
-              }
-
-              // ORDER STATUS
-              // PAID - paid money by user
-              // SHIPPED - item shipped
-              // CANCELLED - item cancelled
-              // DELIVERED - order delivered
-
-              Map<String, dynamic> orderData = {
-                "user_id": currentUser!.uid,
-                "name": user.name,
-                "email": user.email,
-                "address": user.address,
-                "phone": user.phone,
-                "discount": discount,
-                "total": cart.totalCost - discount,
-                "products": products,
-                "status": "PAID",
-                "created_at": DateTime.now().millisecondsSinceEpoch
-              };
-
-  dataOfOrder=orderData;
-
-
-  // creating new order
- await DbService().createOrder(data: orderData);
-
-//  reduce the quantity of product on firestore
-   for (int i = 0; i < cart.products.length; i++) {
-    DbService().reduceQuantity(productId: cart.products[i].id, quantity: cart.carts[i].quantity);
-   }
-
-  // clear the cart for the user
- await DbService().emptyCart();
-
-  paymentSuccess=true;
-
-//  close the checkout page
-Navigator.pop(context);
-
-     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-                  "Payment Done",
-                  style: TextStyle(color: Colors.white),
-                ),
-                backgroundColor: Colors.green,
-              ));
-
-}catch(e){
-     print("payment sheet error : $e");
-              print("payment sheet failed");
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(
-                  "Payment Failed",
-                  style: TextStyle(color: Colors.white),
-                ),
-                backgroundColor: Colors.redAccent,
-              ));
-}
-
-if(paymentSuccess){
-  MailService().sendMailFromGmail(user.email, OrdersModel.fromJson(dataOfOrder, ""));
-}
-
-
-        },style: ElevatedButton.styleFrom(backgroundColor: Colors.blue,foregroundColor: Colors.white),),
       ),
     );
   }

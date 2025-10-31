@@ -56,7 +56,7 @@ class _ProductsPageState extends State<ProductsPage> {
               subtitle: Row(
                 mainAxisAlignment:  MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("₹ ${products[index].new_price.toString()}"),
+                  Text("KSh ${products[index].new_price.toString()}"),
                   Container(padding: EdgeInsets.all(4), color: Theme.of(context).primaryColor,child: Text(products[index].category.toUpperCase(),style: TextStyle(color: Colors.white),))
                 ],
               ),
